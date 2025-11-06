@@ -19,6 +19,16 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
-
+    # Configuration du service JiraClient
+    App\Service\JiraClient:
+        arguments:
+            $logger: '@logger'
+            $jiraBaseUrl: '%env(JIRA_BASE_URL)%'
+            $jiraEmail: '%env(JIRA_EMAIL)%'
+            $jiraApiToken: '%env(JIRA_API_TOKEN)%'
+            $defaultProjectKey: '%env(JIRA_DEFAULT_PROJECT_KEY)%'
+            $defaultIssueType: '%env(JIRA_DEFAULT_ISSUE_TYPE)%'
+        tags:
+            - { name: monolog.logger, channel: jira }
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

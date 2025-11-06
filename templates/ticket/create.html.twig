@@ -1,0 +1,133 @@
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Créer un ticket Jira{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Créer un nouveau ticket Jira</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="ticketForm" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="summary" class="form-label">Titre du ticket *</label>
+                                <input type="text" class="form-control" id="summary" name="summary" required>
+                                <div class="form-text">Décrivez brièvement le problème ou la demande</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description *</label>
+                                <textarea class="form-control" id="description" name="description" rows="5" required></textarea>
+                                <div class="form-text">Décrivez en détail le problème ou la demande</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="author" class="form-label">Auteur *</label>
+                                <input type="text" class="form-control" id="author" name="author" required>
+
+                                <div class="form-text">Qui emmet la demande ?</div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="project_key" class="form-label">Projet</label>
+                                        <input type="text" class="form-control" id="project_key" name="project_key" placeholder="WEB" value="WEB">
+                                        <div class="form-text">Laissez vide pour utiliser le projet par défaut</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="issue_type" class="form-label">Type de ticket</label>
+                                        <select class="form-control" id="issue_type" name="issue_type">
+                                            <option value="">Par défaut</option>
+                                            <option value="Task">Tâche</option>
+                                            <option value="Bug">Bug</option>
+                                            <option value="Story">Story</option>
+                                            <option value="Epic">Epic</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="attachment" class="form-label">Pièce jointe (optionnel)</label>
+                                <input type="file" class="form-control" id="attachment" name="attachment" accept="image/*,.pdf,.doc,.docx,.txt">
+                                <div class="form-text">Ajoutez une capture d'écran ou un document explicatif</div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <span class="spinner-border spinner-border-sm d-none" id="loading"></span>
+                                    Créer le ticket
+                                </button>
+                            </div>
+                        </form>
+
+                        <div id="result" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('ticketForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitButton = this.querySelector('button[type="submit"]');
+            const loading = document.getElementById('loading');
+            const resultDiv = document.getElementById('result');
+
+            // Affichage du loader
+            submitButton.disabled = true;
+            loading.classList.remove('d-none');
+            resultDiv.innerHTML = '';
+
+            try {
+                const formData = new FormData(this);
+
+                const response = await fetch('{{ path("ticket_create") }}', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h5>✅ ${result.message}</h5>
+                    <p><strong>Ticket créé:</strong> <a href="${result.ticket.url}" target="_blank">${result.ticket.key}</a></p>
+                    ${result.ticket.attachments ? `<p><strong>Pièces jointes:</strong> ${result.ticket.attachments}</p>` : ''}
+                </div>
+            `;
+                    this.reset(); // Reset du formulaire
+                } else {
+                    resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5>❌ Erreur</h5>
+                    <p>${result.message || 'Une erreur est survenue'}</p>
+                    ${result.errors ? '<ul><li>' + result.errors.join('</li><li>') + '</li></ul>' : ''}
+                </div>
+            `;
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <h5>❌ Erreur réseau</h5>
+                <p>Impossible de communiquer avec le serveur: ${error.message}</p>
+            </div>
+        `;
+            } finally {
+                // Masquage du loader
+                submitButton.disabled = false;
+                loading.classList.add('d-none');
+            }
+        });
+    </script>
+{% endblock %}

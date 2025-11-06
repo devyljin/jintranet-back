@@ -5,5 +5,25 @@
   "ignore": [
     "node_modules",
     ".git"
-  ]
+  ],
+  "size": 0.000202178955078125,
+  "filesCount": 4,
+  "clientCertificates": {
+    "enabled": true,
+    "certs": [
+      {
+        "domain": "localhost",
+        "type": "pfx",
+        "pfxFilePath": "../certificates/client.pfx",
+        "passphrase": "MonMotDePasseTresSecret123!"
+      },
+      {
+        "domain": "localhost",
+        "type": "cert",
+        "certFilePath": "../certificates/caddy-root.crt",
+        "keyFilePath": "../certificates/client.key.pem",
+        "passphrase": "MonMotDePasseTresSecret123!"
+      }
+    ]
+  }
 }

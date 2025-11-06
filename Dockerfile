@@ -47,9 +47,9 @@ RUN install-php-extensions pdo_pgsql
 ###< doctrine/doctrine-bundle ###
 ###< recipes ###
 
-COPY --link frankenphp/conf.d/10-app.ini $PHP_INI_DIR/app.conf.d/
-COPY --link --chmod=755 frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
-COPY --link frankenphp/Caddyfile /etc/frankenphp/Caddyfile
+COPY --link ../frankenphp/conf.d/10-app.ini $PHP_INI_DIR/app.conf.d/
+COPY --link --chmod=755 ../frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
+COPY --link ../frankenphp/Caddyfile /etc/frankenphp/Caddyfile
 
 ENTRYPOINT ["docker-entrypoint"]
 
@@ -70,8 +70,10 @@ RUN set -eux; \
 		xdebug \
 	;
 
-COPY --link frankenphp/conf.d/20-app.dev.ini $PHP_INI_DIR/app.conf.d/
-
+COPY --link ../frankenphp/conf.d/20-app.dev.ini $PHP_INI_DIR/app.conf.d/
+# Exemple dans Dockerfile PHP
+COPY certificates/caddy-root.crt /usr/local/share/ca-certificates/caddy-root.crt
+RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
 CMD [ "frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile", "--watch" ]
 
 # Prod FrankenPHP image
@@ -81,7 +83,7 @@ ENV APP_ENV=prod
 
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
-COPY --link frankenphp/conf.d/20-app.prod.ini $PHP_INI_DIR/app.conf.d/
+COPY --link ../dev-metal/frankenphp/conf.d/20-app.prod.ini $PHP_INI_DIR/app.conf.d/
 
 # prevent the reinstallation of vendors at every changes in the source code
 COPY --link composer.* symfony.* ./
@@ -98,3 +100,4 @@ RUN set -eux; \
 	composer dump-env prod; \
 	composer run-script --no-dev post-install-cmd; \
 	chmod +x bin/console; sync;
+
