@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Edit ChatChannel{% endblock %}
+
+{% block body %}
+    <h1>Edit ChatChannel</h1>
+
+    {{ include('chat/chat_channel/_form.html.twig', {'button_label': 'Update'}) }}
+
+    <a href="{{ path('app_chat_chat_channel_index') }}">back to list</a>
+
+    {{ include('chat/chat_channel/_delete_form.html.twig') }}
+{% endblock %}

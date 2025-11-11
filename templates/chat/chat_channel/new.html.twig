@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}New ChatChannel{% endblock %}
+
+{% block body %}
+    <h1>Create new ChatChannel</h1>
+
+    {{ include('chat/chat_channel/_form.html.twig') }}
+
+    <a href="{{ path('app_chat_chat_channel_index') }}">back to list</a>
+{% endblock %}

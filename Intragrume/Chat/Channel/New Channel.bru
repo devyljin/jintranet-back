@@ -1,0 +1,17 @@
+meta {
+  name: New Channel
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{api}}/chat/channel/new
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Nouveau Canal"
+  }
+}
