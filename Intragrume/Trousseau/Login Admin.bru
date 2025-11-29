@@ -1,0 +1,27 @@
+meta {
+  name: Login Admin
+  type: http
+  seq: 1
+}
+
+post {
+  url: https://localhost/api/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "username": "admin",
+    "password": "modpass"
+  }
+}
+
+vars:post-response {
+  access_token: res.body.token
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
