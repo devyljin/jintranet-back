@@ -61,3 +61,10 @@ caddy-local-*.crt
 /docker-compose.override.yml
 /.docker/
 ###< Docker ###
+
+###> Frontend React ###
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.env.local
+/frontend/.env.production.local
+###< Frontend React ###

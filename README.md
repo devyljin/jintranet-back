@@ -1,51 +1,165 @@
-# Symfony Docker
+# Intragrume
 
-A [Docker](https://www.docker.com/)-based installer and runtime for the [Symfony](https://symfony.com) web framework,
-with [FrankenPHP](https://frankenphp.dev) and [Caddy](https://caddyserver.com/) inside!
+Application web fullstack avec backend Symfony et frontend React.
 
-![CI](https://github.com/dunglas/symfony-docker/workflows/CI/badge.svg)
+## Architecture
 
-## Getting Started
+- **Backend**: Symfony 7 + API Platform + PostgreSQL
+- **Frontend**: React 18 + TypeScript + Vite
+- **Infrastructure**: Docker + Caddy (HTTPS local)
 
-1. If not already done, [install Docker Compose](https://docs.docker.com/compose/install/) (v2.10+)
-2. Run `docker compose build --pull --no-cache` to build fresh images
-3. Run `docker compose up --wait` to set up and start a fresh Symfony project
-4. Open `https://localhost` in your favorite web browser and [accept the auto-generated TLS certificate](https://stackoverflow.com/a/15076602/1352334)
-5. Run `docker compose down --remove-orphans` to stop the Docker containers.
+## Fonctionnalités
 
-## Features
+### Chat
+- Système de channels de discussion
+- Support des channels publics/privés
+- Hiérarchie de channels (sous-channels)
 
-* Production, development and CI ready
-* Just 1 service by default
-* Blazing-fast performance thanks to [the worker mode of FrankenPHP](https://github.com/dunglas/frankenphp/blob/main/docs/worker.md) (automatically enabled in prod mode)
-* [Installation of extra Docker Compose services](docs/extra-services.md) with Symfony Flex
-* Automatic HTTPS (in dev and prod)
-* HTTP/3 and [Early Hints](https://symfony.com/blog/new-in-symfony-6-3-early-hints) support
-* Real-time messaging thanks to a built-in [Mercure hub](https://symfony.com/doc/current/mercure.html)
-* [Vulcain](https://vulcain.rocks) support
-* Native [XDebug](docs/xdebug.md) integration
-* Super-readable configuration
+### Jira Integration
+- Connexion à Jira Cloud
+- Gestion des tickets
 
-**Enjoy!**
+### Authentication
+- JWT Authentication
+- API sécurisée
 
-## Docs
+## Démarrage rapide
 
-1. [Options available](docs/options.md)
-2. [Using Symfony Docker with an existing project](docs/existing-project.md)
-3. [Support for extra services](docs/extra-services.md)
-4. [Deploying in production](docs/production.md)
-5. [Debugging with Xdebug](docs/xdebug.md)
-6. [TLS Certificates](docs/tls.md)
-7. [Using MySQL instead of PostgreSQL](docs/mysql.md)
-8. [Using Alpine Linux instead of Debian](docs/alpine.md)
-9. [Using a Makefile](docs/makefile.md)
-10. [Updating the template](docs/updating.md)
-11. [Troubleshooting](docs/troubleshooting.md)
+### Prérequis
 
-## License
+- Docker & Docker Compose
+- Node.js 18+ (pour le frontend)
 
-Symfony Docker is available under the MIT License.
+### Backend (Symfony)
 
-## Credits
+```bash
+# Démarrer les conteneurs
+docker compose up -d
 
-Created by [Kévin Dunglas](https://dunglas.dev), co-maintained by [Maxime Helias](https://twitter.com/maxhelias) and sponsored by [Les-Tilleuls.coop](https://les-tilleuls.coop).
+# Installer les dépendances
+docker compose exec php composer install
+
+# Créer la base de données
+docker compose exec php bin/console doctrine:database:create
+docker compose exec php bin/console doctrine:migrations:migrate
+
+# L'API est accessible sur https://localhost
+```
+
+### Frontend (React)
+
+```bash
+cd frontend
+npm install
+npm run dev
+
+# Le frontend est accessible sur http://localhost:5173
+```
+
+### SSL/HTTPS
+
+Pour configurer SSL en local:
+
+```bash
+./install-ssl-cert.sh
+```
+
+Voir `SSL-TROUBLESHOOTING.md` pour plus de détails.
+
+## API Endpoints
+
+### Chat
+- `GET /api/v1/chat/channel` - Liste des channels
+- `POST /api/v1/chat/channel/new` - Créer un channel
+
+### Jira
+- `/api/v1/jira/*` - Endpoints Jira
+
+## Configuration
+
+### Backend (.env)
+
+```env
+DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app"
+JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem
+JIRA_BASE_URL=https://your-domain.atlassian.net
+JIRA_EMAIL=your-email
+JIRA_API_TOKEN=your-token
+```
+
+### Frontend (frontend/.env)
+
+```env
+VITE_API_BASE_URL=/api/v1
+```
+
+## Structure du projet
+
+```
+.
+├── src/                    # Code source Symfony
+│   ├── Controller/        # Controllers API
+│   ├── Entity/           # Entités Doctrine
+│   └── Repository/       # Repositories
+├── frontend/              # Application React
+│   ├── src/
+│   │   ├── api/         # API clients
+│   │   ├── pages/       # Pages React
+│   │   └── contexts/    # React contexts
+│   └── package.json
+├── config/               # Configuration Symfony
+├── docker-compose.yaml   # Configuration Docker
+└── Intragrume/          # Collections Bruno (API testing)
+```
+
+## Testing
+
+### API avec Bruno
+
+Ouvrez le dossier `Intragrume/` avec Bruno pour tester l'API.
+
+### Frontend
+
+```bash
+cd frontend
+npm run test
+```
+
+## Documentation
+
+- [Frontend README](./README-FRONTEND.md)
+- [SSL Troubleshooting](./SSL-TROUBLESHOOTING.md)
+
+## Développement
+
+### Ajouter un endpoint API
+
+1. Créer un controller dans `src/Controller/`
+2. Ajouter les routes avec l'attribut `#[Route]`
+3. Tester avec Bruno
+4. Créer le client API dans `frontend/src/api/`
+
+### Ajouter une page frontend
+
+1. Créer le composant dans `frontend/src/pages/`
+2. Ajouter la route dans `frontend/src/App.tsx`
+3. Créer les appels API nécessaires
+
+## Production
+
+### Build frontend
+
+```bash
+cd frontend
+npm run build
+```
+
+Les fichiers statiques seront dans `frontend/dist/`
+
+### Deploy
+
+Le projet est conçu pour être déployé avec Docker.
+
+## Support
+
+Pour les problèmes SSL/HTTPS, consultez `SSL-TROUBLESHOOTING.md`.
