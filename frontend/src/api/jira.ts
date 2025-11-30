@@ -45,22 +45,22 @@ export interface TestConnectionResponse {
 
 export const jiraApi = {
   createTicket: async (data: CreateTicketData): Promise<CreateTicketResponse> => {
-    const response = await apiClient.post<CreateTicketResponse>('/jira/tickets', data);
+    const response = await apiClient.post<CreateTicketResponse>('/v1/jira/tickets', data);
     return response.data;
   },
 
   getTicket: async (ticketKey: string): Promise<JiraTicket> => {
-    const response = await apiClient.get<GetTicketResponse>(`/jira/tickets/${ticketKey}`);
+    const response = await apiClient.get<GetTicketResponse>(`/v1/jira/tickets/${ticketKey}`);
     return response.data.ticket;
   },
 
   testConnection: async (): Promise<boolean> => {
-    const response = await apiClient.get<TestConnectionResponse>('/jira/connection');
+    const response = await apiClient.get<TestConnectionResponse>('/v1/jira/connection');
     return response.data.success;
   },
 
   getMetadata: async (projectKey: string = 'WEB') => {
-    const response = await apiClient.get('/jira/metadata', {
+    const response = await apiClient.get('/v1/jira/metadata', {
       params: { projectKey }
     });
     return response.data;
