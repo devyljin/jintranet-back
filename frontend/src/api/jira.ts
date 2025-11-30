@@ -124,4 +124,11 @@ export const jiraApi = {
     const response = await apiClient.get('/v1/jira/my-tickets');
     return response.data;
   },
+
+  addComment: async (ticketKey: string, comment: string): Promise<{ success: boolean; comment: JiraComment; message: string }> => {
+    const response = await apiClient.post(`/v1/jira/tickets/${ticketKey}/comment`, {
+      comment
+    });
+    return response.data;
+  },
 };

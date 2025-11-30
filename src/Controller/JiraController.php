@@ -561,6 +561,73 @@ class JiraController extends AbstractController
     }
 
     /**
+     * Ajoute un commentaire à un ticket Jira
+     */
+    #[Route('/tickets/{ticketKey}/comment', name: 'add_comment', methods: ['POST'])]
+    public function addComment(string $ticketKey, Request $request): JsonResponse
+    {
+        try {
+            // Vérifier que l'utilisateur est authentifié
+            $user = $this->getUser();
+
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], Response::HTTP_UNAUTHORIZED);
+            }
+
+            // Récupérer le commentaire depuis le body de la requête
+            $data = json_decode($request->getContent(), true);
+
+            if (!isset($data['comment']) || empty(trim($data['comment']))) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le commentaire ne peut pas être vide'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            $comment = $user->getUserIdentifier() . " dit : ";
+            $comment .= trim($data['comment']);
+
+            $this->logger->info('Ajout d\'un commentaire au ticket', [
+                'ticketKey' => $ticketKey,
+                'userId' => $user->getId(),
+                'commentLength' => strlen($comment)
+            ]);
+
+            // Ajouter le commentaire via le service JiraClient
+            $commentData = $this->jiraClient->addComment($ticketKey, $comment);
+
+            // Extraire les informations du commentaire créé
+            $createdComment = [
+                'id' => $commentData['id'],
+                'author' => $commentData['author']['displayName'] ?? 'Unknown',
+                'authorEmail' => $commentData['author']['emailAddress'] ?? null,
+                'body' => $this->extractDescriptionText($commentData['body']),
+                'created' => $commentData['created'],
+                'updated' => $commentData['updated']
+            ];
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Commentaire ajouté avec succès',
+                'comment' => $createdComment
+            ], Response::HTTP_CREATED);
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de l\'ajout du commentaire', [
+                'ticketKey' => $ticketKey,
+                'error' => $e->getMessage()
+            ]);
+
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'ajout du commentaire: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
      * Génère l'URL complète du ticket Jira
      */
     private function generateJiraUrl(string $ticketKey): string

@@ -271,6 +271,12 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.comment-form {
+  margin-bottom: 30px;
+  padding-bottom: 30px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
 .comments-section h3 {
   font-size: 20px;
   color: #333;
@@ -366,15 +372,21 @@
 
 /* Alerts */
 .alert {
-  padding: 20px;
+  padding: 15px;
   border-radius: 8px;
-  margin: 20px 0;
+  margin: 10px 0;
 }
 
 .alert-error {
   background: #ffebee;
   border: 1px solid #ef5350;
   color: #c62828;
+}
+
+.alert-success {
+  background: #e8f5e9;
+  border: 1px solid #4caf50;
+  color: #2e7d32;
 }
 
 .alert-warning {

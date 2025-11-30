@@ -10,6 +10,10 @@ export default function TicketDetail() {
   const [ticket, setTicket] = useState<JiraTicket | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [newComment, setNewComment] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [commentError, setCommentError] = useState('');
+  const [commentSuccess, setCommentSuccess] = useState('');
 
   useEffect(() => {
     if (ticketKey) {
@@ -29,6 +33,43 @@ export default function TicketDetail() {
       setError(err.response?.data?.message || 'Erreur lors du chargement du ticket');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCommentError('');
+    setCommentSuccess('');
+
+    if (!newComment.trim()) {
+      setCommentError('Le commentaire ne peut pas être vide');
+      return;
+    }
+
+    if (!ticketKey) {
+      setCommentError('Clé du ticket manquante');
+      return;
+    }
+
+    setSubmittingComment(true);
+
+    try {
+      await jiraApi.addComment(ticketKey, newComment.trim());
+      setCommentSuccess('Commentaire ajouté avec succès !');
+      setNewComment('');
+
+      // Recharger le ticket pour afficher le nouveau commentaire
+      await loadTicket(ticketKey);
+
+      // Effacer le message de succès après 3 secondes
+      setTimeout(() => setCommentSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Erreur lors de l\'ajout du commentaire:', err);
+      setCommentError(
+        err.response?.data?.message || 'Erreur lors de l\'ajout du commentaire'
+      );
+    } finally {
+      setSubmittingComment(false);
     }
   };
 
@@ -206,10 +247,52 @@ export default function TicketDetail() {
         )}
 
         {/* Commentaires */}
-        {ticket.comments && ticket.comments.length > 0 && (
-          <section className="comments-section">
-            <h3>💬 Commentaires ({ticket.commentsCount})</h3>
-            <div className="comments-list">
+        <section className="comments-section">
+          <h3>💬 Commentaires ({ticket.commentsCount || 0})</h3>
+
+          {/* Formulaire d'ajout de commentaire */}
+          <form onSubmit={handleSubmitComment} className="comment-form">
+            {commentError && (
+              <div className="alert alert-error">{commentError}</div>
+            )}
+            {commentSuccess && (
+              <div className="alert alert-success">{commentSuccess}</div>
+            )}
+
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Ajoutez un commentaire..."
+              rows={4}
+              disabled={submittingComment}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '4px',
+                border: '1px solid #ddd',
+                fontSize: '14px',
+                fontFamily: 'inherit',
+                resize: 'vertical',
+                marginBottom: '10px'
+              }}
+            />
+
+            <button
+              type="submit"
+              disabled={submittingComment || !newComment.trim()}
+              className="btn-primary"
+              style={{
+                opacity: submittingComment || !newComment.trim() ? 0.6 : 1,
+                cursor: submittingComment || !newComment.trim() ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {submittingComment ? 'Envoi...' : 'Ajouter un commentaire'}
+            </button>
+          </form>
+
+          {/* Liste des commentaires */}
+          {ticket.comments && ticket.comments.length > 0 ? (
+            <div className="comments-list" style={{ marginTop: '30px' }}>
               {ticket.comments.map((comment) => (
                 <div key={comment.id} className="comment-card">
                   <div className="comment-header">
@@ -243,19 +326,17 @@ export default function TicketDetail() {
                 </div>
               ))}
             </div>
-          </section>
-        )}
+          ) : (
+            <div className="empty-section" style={{ marginTop: '30px' }}>
+              <p>Aucun commentaire pour le moment. Soyez le premier à commenter !</p>
+            </div>
+          )}
+        </section>
 
         {/* Sections vides */}
         {(!ticket.attachments || ticket.attachments.length === 0) && (
           <section className="empty-section">
             <p>📎 Aucune pièce jointe</p>
-          </section>
-        )}
-
-        {(!ticket.comments || ticket.comments.length === 0) && (
-          <section className="empty-section">
-            <p>💬 Aucun commentaire</p>
           </section>
         )}
       </div>

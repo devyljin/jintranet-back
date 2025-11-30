@@ -492,4 +492,73 @@ class JiraClient
             throw $e;
         }
     }
+
+    /**
+     * Ajoute un commentaire à un ticket Jira
+     *
+     * @param string $issueKey Clé du ticket (ex: "WEB-123")
+     * @param string $comment Texte du commentaire
+     *
+     * @return array Données du commentaire créé
+     * @throws \Exception En cas d'erreur lors de l'ajout du commentaire
+     */
+    public function addComment(string $issueKey, string $comment): array
+    {
+        $this->logger->info('Ajout d\'un commentaire au ticket Jira', [
+            'issueKey' => $issueKey,
+            'commentLength' => strlen($comment)
+        ]);
+
+        // Convertir le commentaire en format ADF (Atlassian Document Format)
+        $commentBody = [
+            'type' => 'doc',
+            'version' => 1,
+            'content' => [
+                [
+                    'type' => 'paragraph',
+                    'content' => [
+                        [
+                            'type' => 'text',
+                            'text' => $comment
+                        ]
+                    ]
+                ]
+            ]
+        ];
+
+        $data = [
+            'body' => $commentBody
+        ];
+
+        try {
+            $response = $this->httpClient->request(
+                'POST',
+                $this->jiraBaseUrl . '/rest/api/3/issue/' . $issueKey . '/comment',
+                [
+                    'json' => $data,
+                ]
+            );
+
+            $statusCode = $response->getStatusCode();
+            $responseData = $response->toArray();
+
+            if ($statusCode === 201) {
+                $this->logger->info('Commentaire ajouté avec succès', [
+                    'issueKey' => $issueKey,
+                    'commentId' => $responseData['id']
+                ]);
+
+                return $responseData;
+            } else {
+                throw new \Exception("Erreur lors de l'ajout du commentaire: " . $response->getContent(false));
+            }
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de l\'ajout du commentaire', [
+                'error' => $e->getMessage(),
+                'issueKey' => $issueKey
+            ]);
+            throw $e;
+        }
+    }
 }
