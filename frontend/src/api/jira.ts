@@ -94,4 +94,9 @@ export const jiraApi = {
     });
     return response.data;
   },
+
+  getMyTickets: async (): Promise<{ success: boolean; data: { tickets: JiraTicket[]; total: number; errors: any[] } }> => {
+    const response = await apiClient.get('/v1/jira/my-tickets');
+    return response.data;
+  },
 };

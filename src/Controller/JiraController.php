@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Repository\CrossRepository;
 use App\Service\JiraClient;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -16,11 +17,16 @@ class JiraController extends AbstractController
 {
     private JiraClient $jiraClient;
     private LoggerInterface $logger;
+    private CrossRepository $crossRepository;
 
-    public function __construct(JiraClient $jiraClient, LoggerInterface $logger)
-    {
+    public function __construct(
+        JiraClient $jiraClient,
+        LoggerInterface $logger,
+        CrossRepository $crossRepository
+    ) {
         $this->jiraClient = $jiraClient;
         $this->logger = $logger;
+        $this->crossRepository = $crossRepository;
     }
 
     /**
@@ -407,6 +413,105 @@ class JiraController extends AbstractController
 
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la récupération des tickets', [
+                'error' => $e->getMessage()
+            ]);
+
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des tickets: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupère tous les tickets Jira de l'utilisateur connecté
+     *
+     * Cette route récupère toutes les entités Cross liées à l'utilisateur
+     * et retourne les détails des tickets Jira correspondants
+     */
+    #[Route('/my-tickets', name: 'my_tickets', methods: ['GET'])]
+    public function getMyTickets(): JsonResponse
+    {
+        try {
+            // Récupérer l'utilisateur connecté
+            $user = $this->getUser();
+
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], Response::HTTP_UNAUTHORIZED);
+            }
+
+            // Récupérer toutes les entités Cross de l'utilisateur
+            $crosses = $this->crossRepository->findBy(['sender' => $user]);
+
+            if (empty($crosses)) {
+                return $this->json([
+                    'success' => true,
+                    'data' => [
+                        'tickets' => [],
+                        'total' => 0
+                    ],
+                    'message' => 'Aucun ticket trouvé pour cet utilisateur'
+                ]);
+            }
+
+            // Extraire les issueKeys
+            $issueKeys = array_map(fn($cross) => $cross->getCode(), $crosses);
+
+            $this->logger->info('Récupération des tickets utilisateur', [
+                'user_id' => $user->getId(),
+                'ticket_count' => count($issueKeys),
+                'issue_keys' => $issueKeys
+            ]);
+
+            // Récupérer les détails de chaque ticket
+            $tickets = [];
+            $errors = [];
+
+            foreach ($issueKeys as $issueKey) {
+                try {
+                    $ticket = $this->jiraClient->getIssue($issueKey);
+
+                    $tickets[] = [
+                        'key' => $ticket['key'],
+                        'id' => $ticket['id'],
+                        'summary' => $ticket['fields']['summary'],
+                        'description' => $this->extractDescriptionText($ticket['fields']['description'] ?? null),
+                        'status' => $ticket['fields']['status']['name'] ?? 'Unknown',
+                        'priority' => $ticket['fields']['priority']['name'] ?? 'Unknown',
+                        'issueType' => $ticket['fields']['issuetype']['name'] ?? 'Unknown',
+                        'assignee' => $ticket['fields']['assignee']['displayName'] ?? 'Non assigné',
+                        'reporter' => $ticket['fields']['reporter']['displayName'] ?? 'Unknown',
+                        'created' => $ticket['fields']['created'] ?? null,
+                        'updated' => $ticket['fields']['updated'] ?? null,
+                        'url' => $this->generateJiraUrl($ticket['key'])
+                    ];
+                } catch (\Exception $e) {
+                    $this->logger->warning('Erreur lors de la récupération du ticket', [
+                        'issue_key' => $issueKey,
+                        'error' => $e->getMessage()
+                    ]);
+
+                    $errors[] = [
+                        'issue_key' => $issueKey,
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+
+            return $this->json([
+                'success' => true,
+                'data' => [
+                    'tickets' => $tickets,
+                    'total' => count($tickets),
+                    'errors' => $errors
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des tickets utilisateur', [
                 'error' => $e->getMessage()
             ]);
 

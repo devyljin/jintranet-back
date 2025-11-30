@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { jiraApi, type CreateTicketData, type JiraTicket } from '../api/jira';
@@ -23,6 +23,28 @@ export default function Jira() {
   const [searchKey, setSearchKey] = useState('');
   const [searchedTicket, setSearchedTicket] = useState<JiraTicket | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [myTickets, setMyTickets] = useState<JiraTicket[]>([]);
+  const [loadingMyTickets, setLoadingMyTickets] = useState(false);
+
+  // Charger les tickets de l'utilisateur au montage du composant
+  useEffect(() => {
+    loadMyTickets();
+  }, []);
+
+  const loadMyTickets = async () => {
+    setLoadingMyTickets(true);
+    try {
+      const response = await jiraApi.getMyTickets();
+      if (response.success) {
+        setMyTickets(response.data.tickets);
+        console.log('Mes tickets chargés:', response.data.total);
+      }
+    } catch (err: any) {
+      console.error('Erreur lors du chargement des tickets:', err);
+    } finally {
+      setLoadingMyTickets(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -94,6 +116,9 @@ export default function Jira() {
       // Récupérer les détails du ticket créé
       const ticket = await jiraApi.getTicket(response.ticket.key);
       setCreatedTicket(ticket);
+
+      // Recharger la liste des tickets de l'utilisateur
+      loadMyTickets();
 
       // Réinitialiser le formulaire et les fichiers
       setFormData({
@@ -330,28 +355,64 @@ export default function Jira() {
           )}
         </div>
 
+        {/*<div className="jira-section">*/}
+        {/*  <h2>Rechercher un ticket</h2>*/}
+
+        {/*  <form onSubmit={handleSearch} className="search-form">*/}
+        {/*    <div className="search-input-group">*/}
+        {/*      <input*/}
+        {/*        type="text"*/}
+        {/*        value={searchKey}*/}
+        {/*        onChange={(e) => setSearchKey(e.target.value)}*/}
+        {/*        placeholder="Ex: WEB-123"*/}
+        {/*        disabled={loading}*/}
+        {/*      />*/}
+        {/*      <button type="submit" className="btn-primary" disabled={loading || !searchKey}>*/}
+        {/*        {loading ? 'Recherche...' : 'Rechercher'}*/}
+        {/*      </button>*/}
+        {/*    </div>*/}
+        {/*  </form>*/}
+
+        {/*  {searchedTicket && (*/}
+        {/*    <div className="searched-ticket">*/}
+        {/*      {renderTicketCard(searchedTicket)}*/}
+        {/*    </div>*/}
+        {/*  )}*/}
+        {/*</div>*/}
+
         <div className="jira-section">
-          <h2>Rechercher un ticket</h2>
+          <h2>Mes tickets ({myTickets.length})</h2>
 
-          <form onSubmit={handleSearch} className="search-form">
-            <div className="search-input-group">
-              <input
-                type="text"
-                value={searchKey}
-                onChange={(e) => setSearchKey(e.target.value)}
-                placeholder="Ex: WEB-123"
-                disabled={loading}
-              />
-              <button type="submit" className="btn-primary" disabled={loading || !searchKey}>
-                {loading ? 'Recherche...' : 'Rechercher'}
-              </button>
+          {loadingMyTickets && (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <p>Chargement de vos tickets...</p>
             </div>
-          </form>
+          )}
 
-          {searchedTicket && (
-            <div className="searched-ticket">
-              {renderTicketCard(searchedTicket)}
+          {!loadingMyTickets && myTickets.length === 0 && (
+            <div className="alert alert-info">
+              Vous n'avez créé aucun ticket pour le moment.
             </div>
+          )}
+
+          {!loadingMyTickets && myTickets.length > 0 && (
+            <div className="my-tickets-list">
+              {myTickets.map((ticket) => (
+                <div key={ticket.key} style={{ marginBottom: '20px' }}>
+                  {renderTicketCard(ticket)}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loadingMyTickets && myTickets.length > 0 && (
+            <button
+              onClick={loadMyTickets}
+              className="btn-secondary"
+              style={{ marginTop: '10px' }}
+            >
+              🔄 Actualiser
+            </button>
           )}
         </div>
       </div>
