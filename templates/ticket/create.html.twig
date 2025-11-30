@@ -54,9 +54,11 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="attachment" class="form-label">Pièce jointe (optionnel)</label>
-                                <input type="file" class="form-control" id="attachment" name="attachment" accept="image/*,.pdf,.doc,.docx,.txt">
-                                <div class="form-text">Ajoutez une capture d'écran ou un document explicatif</div>
+                                <label for="attachments" class="form-label">Pièces jointes (optionnel - max 10 fichiers)</label>
+                                <input type="file" class="form-control" id="attachments" name="attachments[]"
+                                       accept="image/*,.pdf,.doc,.docx,.txt,.xlsx,.csv" multiple>
+                                <div class="form-text">Ajoutez des captures d'écran ou des documents explicatifs (images, PDF, documents Office)</div>
+                                <div id="fileList" class="mt-2"></div>
                             </div>
 
                             <div class="d-grid gap-2">
@@ -75,6 +77,34 @@
     </div>
 
     <script>
+        // Prévisualisation des fichiers sélectionnés
+        document.getElementById('attachments').addEventListener('change', function(e) {
+            const fileList = document.getElementById('fileList');
+            const files = e.target.files;
+
+            if (files.length === 0) {
+                fileList.innerHTML = '';
+                return;
+            }
+
+            if (files.length > 10) {
+                alert('Maximum 10 fichiers autorisés');
+                e.target.value = '';
+                fileList.innerHTML = '';
+                return;
+            }
+
+            let html = '<div class="alert alert-info"><strong>Fichiers sélectionnés (' + files.length + '):</strong><ul class="mb-0 mt-2">';
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const size = (file.size / 1024).toFixed(2);
+                html += `<li>${file.name} <small>(${size} KB)</small></li>`;
+            }
+            html += '</ul></div>';
+            fileList.innerHTML = html;
+        });
+
+        // Soumission du formulaire
         document.getElementById('ticketForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
@@ -90,7 +120,8 @@
             try {
                 const formData = new FormData(this);
 
-                const response = await fetch('{{ path("ticket_create") }}', {
+                // Utilisation de l'API Jira
+                const response = await fetch('/api/v1/jira/tickets', {
                     method: 'POST',
                     body: formData
                 });
@@ -98,31 +129,49 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    // Affichage du résultat de succès
+                    let attachmentInfo = '';
+                    if (result.ticket.attachments) {
+                        attachmentInfo = `<p><strong>Pièces jointes:</strong> ${result.ticket.attachments}</p>`;
+                    } else if (result.ticket.attachments_count !== undefined) {
+                        attachmentInfo = `<p><strong>Pièces jointes:</strong> ${result.ticket.attachments_count} fichier(s) ajouté(s)`;
+                        if (result.ticket.attachments_failed > 0) {
+                            attachmentInfo += ` (${result.ticket.attachments_failed} échoué(s))`;
+                        }
+                        attachmentInfo += '</p>';
+                    }
+
                     resultDiv.innerHTML = `
-                <div class="alert alert-success">
-                    <h5>✅ ${result.message}</h5>
-                    <p><strong>Ticket créé:</strong> <a href="${result.ticket.url}" target="_blank">${result.ticket.key}</a></p>
-                    ${result.ticket.attachments ? `<p><strong>Pièces jointes:</strong> ${result.ticket.attachments}</p>` : ''}
-                </div>
-            `;
-                    this.reset(); // Reset du formulaire
+                        <div class="alert alert-success">
+                            <h5>✅ ${result.message}</h5>
+                            <p><strong>Ticket créé:</strong> <a href="${result.ticket.url}" target="_blank" class="alert-link">${result.ticket.key}</a></p>
+                            ${attachmentInfo}
+                            <hr>
+                            <a href="${result.ticket.url}" target="_blank" class="btn btn-sm btn-success">Voir le ticket dans Jira</a>
+                        </div>
+                    `;
+
+                    // Reset du formulaire et de la liste des fichiers
+                    this.reset();
+                    document.getElementById('fileList').innerHTML = '';
                 } else {
                     resultDiv.innerHTML = `
-                <div class="alert alert-danger">
-                    <h5>❌ Erreur</h5>
-                    <p>${result.message || 'Une erreur est survenue'}</p>
-                    ${result.errors ? '<ul><li>' + result.errors.join('</li><li>') + '</li></ul>' : ''}
-                </div>
-            `;
+                        <div class="alert alert-danger">
+                            <h5>❌ Erreur</h5>
+                            <p>${result.message || 'Une erreur est survenue'}</p>
+                            ${result.errors ? '<ul><li>' + result.errors.join('</li><li>') + '</li></ul>' : ''}
+                        </div>
+                    `;
                 }
 
             } catch (error) {
                 resultDiv.innerHTML = `
-            <div class="alert alert-danger">
-                <h5>❌ Erreur réseau</h5>
-                <p>Impossible de communiquer avec le serveur: ${error.message}</p>
-            </div>
-        `;
+                    <div class="alert alert-danger">
+                        <h5>❌ Erreur réseau</h5>
+                        <p>Impossible de communiquer avec le serveur: ${error.message}</p>
+                        <small>Vérifiez que le serveur est bien démarré et accessible.</small>
+                    </div>
+                `;
             } finally {
                 // Masquage du loader
                 submitButton.disabled = false;

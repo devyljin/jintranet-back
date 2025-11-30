@@ -13,6 +13,7 @@ export default function Jira() {
     description: '',
     projectKey: 'WEB',
     issueType: 'Task',
+    attachments: [],
   });
 
   const [loading, setLoading] = useState(false);
@@ -21,6 +22,7 @@ export default function Jira() {
   const [createdTicket, setCreatedTicket] = useState<JiraTicket | null>(null);
   const [searchKey, setSearchKey] = useState('');
   const [searchedTicket, setSearchedTicket] = useState<JiraTicket | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const handleLogout = () => {
     logout();
@@ -34,6 +36,35 @@ export default function Jira() {
     });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const fileArray = Array.from(files);
+
+      if (fileArray.length > 10) {
+        setError('Maximum 10 fichiers autorisés');
+        e.target.value = '';
+        return;
+      }
+
+      setSelectedFiles(fileArray);
+      setFormData({
+        ...formData,
+        attachments: fileArray,
+      });
+      setError('');
+    }
+  };
+
+  const removeFile = (index: number) => {
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    setSelectedFiles(newFiles);
+    setFormData({
+      ...formData,
+      attachments: newFiles,
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -41,26 +72,50 @@ export default function Jira() {
     setLoading(true);
 
     try {
+      console.log('Envoi du ticket avec données:', formData);
+      console.log('Fichiers attachés:', selectedFiles.length);
+
       const response = await jiraApi.createTicket(formData);
 
-      setSuccess(`Ticket ${response.ticket.key} créé avec succès !`);
+      let successMessage = `Ticket ${response.ticket.key} créé avec succès !`;
+
+      if (response.ticket.attachments) {
+        successMessage += ` (${response.ticket.attachments} fichier(s) joint(s))`;
+      } else if (response.ticket.attachments_count !== undefined) {
+        successMessage += ` (${response.ticket.attachments_count} fichier(s) joint(s)`;
+        if (response.ticket.attachments_failed && response.ticket.attachments_failed > 0) {
+          successMessage += `, ${response.ticket.attachments_failed} échoué(s)`;
+        }
+        successMessage += ')';
+      }
+
+      setSuccess(successMessage);
 
       // Récupérer les détails du ticket créé
       const ticket = await jiraApi.getTicket(response.ticket.key);
       setCreatedTicket(ticket);
 
-      // Réinitialiser le formulaire
+      // Réinitialiser le formulaire et les fichiers
       setFormData({
         summary: '',
         description: '',
         projectKey: 'WEB',
         issueType: 'Task',
+        attachments: [],
       });
+      setSelectedFiles([]);
+
+      // Réinitialiser l'input file
+      const fileInput = document.getElementById('attachments') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
     } catch (err: any) {
       console.error('Error creating ticket:', err);
+      console.log('Error response:', err.response?.data);
       setError(
         err.response?.data?.message ||
-        err.response?.data?.error ||
+        err.response?.data?.errors ||
         'Erreur lors de la création du ticket'
       );
     } finally {
@@ -81,7 +136,7 @@ export default function Jira() {
       console.error('Error fetching ticket:', err);
       setError(
         err.response?.data?.message ||
-        err.response?.data?.error ||
+        err.response?.data?.errors ||
         'Ticket non trouvé'
       );
     } finally {
@@ -149,7 +204,7 @@ export default function Jira() {
         <div className="jira-section">
           <h2>Créer un ticket</h2>
 
-          {error && <div className="alert alert-error">{error}</div>}
+          {(error && Array.isArray(error)) ? error.map((e) => <div className="alert alert-error">{e}</div>) :(error && <div className="alert alert-error">{error}</div>) }
           {success && <div className="alert alert-success">{success}</div>}
 
           <form onSubmit={handleSubmit} className="jira-form">
@@ -209,6 +264,57 @@ export default function Jira() {
                 placeholder="Décrivez le ticket en détail..."
                 disabled={loading}
               />
+            </div>
+            <div className="form-group">
+              <label htmlFor="attachments">Pièces jointes (optionnel - max 10 fichiers)</label>
+              <input
+                id="attachments"
+                name="attachments"
+                type="file"
+                onChange={handleFileChange}
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.txt,.xlsx,.csv"
+                disabled={loading}
+              />
+              <small style={{ color: '#666', fontSize: '12px' }}>
+                Formats acceptés : Images, PDF, documents Office (max 10 fichiers)
+              </small>
+
+              {selectedFiles.length > 0 && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '10px',
+                  backgroundColor: '#e3f2fd',
+                  borderRadius: '4px',
+                  border: '1px solid #90caf9'
+                }}>
+                  <strong>Fichiers sélectionnés ({selectedFiles.length}) :</strong>
+                  <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                    {selectedFiles.map((file, index) => (
+                      <li key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                        <span>
+                          {file.name} <small>({(file.size / 1024).toFixed(2)} KB)</small>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          style={{
+                            background: '#f44336',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            padding: '2px 8px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <button type="submit" className="btn-primary" disabled={loading}>

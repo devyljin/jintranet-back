@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Jira - Diagnostic</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .test-section {
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            color: black;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 3px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+        }
+        label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Diagnostic API Jira</h1>
+    <p>Cette page permet de tester l'API Jira étape par étape pour diagnostiquer les problèmes.</p>
+
+    <!-- Test 0: Route basique -->
+    <div class="test-section">
+        <h2>Test 0: Route API de base</h2>
+        <p>Vérifie que les routes de l'API sont accessibles</p>
+        <button class="btn-primary" onclick="testBasicRoute()">Tester /api/v1/jira/test</button>
+        <div id="result0"></div>
+    </div>
+
+    <!-- Test 1: Connexion Jira -->
+    <div class="test-section">
+        <h2>Test 1: Connexion Jira</h2>
+        <p>Vérifie que les credentials Jira sont corrects</p>
+        <button class="btn-primary" onclick="testConnection()">Tester la connexion</button>
+        <div id="result1"></div>
+    </div>
+
+    <!-- Test 2: Création ticket simple -->
+    <div class="test-section">
+        <h2>Test 2: Création de ticket (sans fichier)</h2>
+        <p>Teste la création d'un ticket simple sans pièce jointe</p>
+        <button class="btn-success" onclick="testCreateSimple()">Créer un ticket simple</button>
+        <div id="result2"></div>
+    </div>
+
+    <!-- Test 3: Formulaire complet -->
+    <div class="test-section">
+        <h2>Test 3: Création avec formulaire</h2>
+        <form id="testForm" onsubmit="testFormSubmit(event)">
+            <div class="form-group">
+                <label>Titre *</label>
+                <input type="text" name="summary" value="Test depuis formulaire HTML" required>
+            </div>
+            <div class="form-group">
+                <label>Description *</label>
+                <textarea name="description" rows="3" required>Ceci est un test de création de ticket depuis le formulaire HTML.</textarea>
+            </div>
+            <div class="form-group">
+                <label>Auteur *</label>
+                <input type="text" name="author" value="Test User" required>
+            </div>
+            <div class="form-group">
+                <label>Fichier (optionnel)</label>
+                <input type="file" name="attachment" id="singleFile" onchange="showFileInfo('singleFile', 'fileInfo3')">
+                <div id="fileInfo3"></div>
+            </div>
+            <button type="submit" class="btn-success">Créer le ticket</button>
+        </form>
+        <div id="result3"></div>
+    </div>
+
+    <!-- Test 4: Plusieurs fichiers -->
+    <div class="test-section">
+        <h2>Test 4: Création avec plusieurs fichiers</h2>
+        <form id="multiFileForm" onsubmit="testMultiFileSubmit(event)">
+            <div class="form-group">
+                <label>Titre *</label>
+                <input type="text" name="summary" value="Test avec plusieurs fichiers" required>
+            </div>
+            <div class="form-group">
+                <label>Description *</label>
+                <textarea name="description" rows="3" required>Test de création avec plusieurs fichiers joints.</textarea>
+            </div>
+            <div class="form-group">
+                <label>Auteur *</label>
+                <input type="text" name="author" value="Test User" required>
+            </div>
+            <div class="form-group">
+                <label>Fichiers multiples (max 10)</label>
+                <input type="file" name="attachments[]" id="multiFiles" multiple onchange="showFileInfo('multiFiles', 'fileInfo4')">
+                <div id="fileInfo4"></div>
+            </div>
+            <button type="submit" class="btn-success">Créer avec fichiers</button>
+        </form>
+        <div id="result4"></div>
+    </div>
+
+    <!-- Test 5: Liste des tickets -->
+    <div class="test-section">
+        <h2>Test 5: Liste des tickets</h2>
+        <button class="btn-primary" onclick="testListTickets()">Lister les tickets</button>
+        <div id="result5"></div>
+    </div>
+
+    <script>
+        function displayResult(elementId, title, data, isError = false) {
+            const element = document.getElementById(elementId);
+            const className = isError ? 'error' : 'success';
+            const emoji = isError ? '❌' : '✅';
+            element.className = 'test-section ' + className;
+            element.innerHTML = `
+                <h3>${emoji} ${title}</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+
+        function showFileInfo(inputId, infoId) {
+            const input = document.getElementById(inputId);
+            const info = document.getElementById(infoId);
+            const files = input.files;
+
+            if (files.length === 0) {
+                info.innerHTML = '';
+                return;
+            }
+
+            let html = '<div style="margin-top: 10px; padding: 10px; background: #e3f2fd; border-radius: 3px;">';
+            html += `<strong>Fichiers sélectionnés (${files.length}):</strong><ul style="margin: 5px 0;">`;
+            for (let i = 0; i < files.length; i++) {
+                const size = (files[i].size / 1024).toFixed(2);
+                html += `<li>${files[i].name} - ${size} KB - ${files[i].type}</li>`;
+            }
+            html += '</ul></div>';
+            info.innerHTML = html;
+        }
+
+        async function testBasicRoute() {
+            try {
+                console.log('Test de la route basique...');
+                const response = await fetch('/api/v1/jira/test');
+                console.log('Status:', response.status);
+                const result = await response.json();
+                console.log('Result:', result);
+                displayResult('result0', 'Route de base accessible', {
+                    status: response.status,
+                    data: result
+                });
+            } catch (error) {
+                console.error('Erreur:', error);
+                displayResult('result0', 'Erreur route de base', {
+                    error: error.message,
+                    stack: error.stack
+                }, true);
+            }
+        }
+
+        async function testConnection() {
+            try {
+                console.log('Test de connexion Jira...');
+                const response = await fetch('/api/v1/jira/connection');
+                console.log('Status:', response.status);
+                const result = await response.json();
+                console.log('Result:', result);
+                displayResult('result1', 'Test de connexion', {
+                    status: response.status,
+                    data: result
+                }, !result.success);
+            } catch (error) {
+                console.error('Erreur:', error);
+                displayResult('result1', 'Erreur de connexion', {
+                    error: error.message
+                }, true);
+            }
+        }
+
+        async function testCreateSimple() {
+            try {
+                console.log('Création ticket simple...');
+                const formData = new FormData();
+                formData.append('summary', 'Test simple - ' + new Date().toISOString());
+                formData.append('description', 'Ticket de test créé automatiquement');
+                formData.append('author', 'Test Automatique');
+
+                console.log('FormData créé');
+
+                const response = await fetch('/api/v1/jira/tickets', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response status:', response.status);
+
+                const result = await response.json();
+                console.log('Result:', result);
+
+                displayResult('result2', 'Création ticket simple', {
+                    status: response.status,
+                    data: result
+                }, !result.success);
+            } catch (error) {
+                console.error('Erreur:', error);
+                displayResult('result2', 'Erreur création', {
+                    error: error.message,
+                    stack: error.stack
+                }, true);
+            }
+        }
+
+        async function testFormSubmit(event) {
+            event.preventDefault();
+
+            try {
+                console.log('Soumission formulaire...');
+                const formData = new FormData(event.target);
+
+                // Log form data
+                console.log('FormData contents:');
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
+
+                const response = await fetch('/api/v1/jira/tickets', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response status:', response.status);
+
+                const result = await response.json();
+                console.log('Result:', result);
+
+                displayResult('result3', 'Création depuis formulaire', {
+                    status: response.status,
+                    data: result
+                }, !result.success);
+            } catch (error) {
+                console.error('Erreur:', error);
+                displayResult('result3', 'Erreur formulaire', {
+                    error: error.message,
+                    stack: error.stack
+                }, true);
+            }
+        }
+
+        async function testMultiFileSubmit(event) {
+            event.preventDefault();
+
+            try {
+                console.log('Soumission avec fichiers multiples...');
+                const formData = new FormData(event.target);
+
+                // Log form data
+                console.log('FormData contents:');
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ':', pair[1]);
+                }
+
+                const response = await fetch('/api/v1/jira/tickets', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response status:', response.status);
+
+                const result = await response.json();
+                console.log('Result:', result);
+
+                displayResult('result4', 'Création avec fichiers multiples', {
+                    status: response.status,
+                    data: result
+                }, !result.success);
+            } catch (error) {
+                console.error('Erreur:', error);
+                displayResult('result4', 'Erreur multi-fichiers', {
+                    error: error.message,
+                    stack: error.stack
+                }, true);
+            }
+        }
+
+        async function testListTickets() {
+            try {
+                console.log('Liste des tickets...');
+                const response = await fetch('/api/v1/jira/tickets?per_page=5');
+                console.log('Status:', response.status);
+                const result = await response.json();
+                console.log('Result:', result);
+                displayResult('result5', 'Liste des tickets', {
+                    status: response.status,
+                    total: result.data?.pagination?.total,
+                    returned: result.data?.issues?.length,
+                    first_ticket: result.data?.issues?.[0]
+                });
+            } catch (error) {
+                console.error('Erreur:', error);
+                displayResult('result5', 'Erreur liste', {
+                    error: error.message
+                }, true);
+            }
+        }
+
+        // Auto-test au chargement
+        window.onload = function() {
+            console.log('=== Page de diagnostic chargée ===');
+            console.log('Ouvrez la console (F12) pour voir les détails');
+        };
+    </script>
+</body>
+</html>

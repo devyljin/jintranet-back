@@ -17,8 +17,10 @@ class Cross
     #[ORM\Column(length: 255)]
     private ?string $code = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $sender = null;
+    #[ORM\ManyToOne(inversedBy: 'tickets')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $sender = null;
+
 
     public function getId(): ?int
     {
@@ -37,12 +39,12 @@ class Cross
         return $this;
     }
 
-    public function getSender(): ?string
+    public function getSender(): ?User
     {
         return $this->sender;
     }
 
-    public function setSender(string $sender): static
+    public function setSender(?User $sender): static
     {
         $this->sender = $sender;
 

@@ -21,6 +21,7 @@ export interface CreateTicketData {
   issueType?: string;
   assigneeAccountId?: string;
   additionalFields?: Record<string, any>;
+  attachments?: File[];
 }
 
 export interface CreateTicketResponse {
@@ -28,7 +29,10 @@ export interface CreateTicketResponse {
   ticket: {
     key: string;
     id: string;
-    self: string;
+    url: string;
+    attachments?: number;
+    attachments_count?: number;
+    attachments_failed?: number;
   };
   message: string;
 }
@@ -45,7 +49,32 @@ export interface TestConnectionResponse {
 
 export const jiraApi = {
   createTicket: async (data: CreateTicketData): Promise<CreateTicketResponse> => {
-    const response = await apiClient.post<CreateTicketResponse>('/v1/jira/tickets', data);
+    // Créer un FormData pour supporter l'upload de fichiers
+    const formData = new FormData();
+
+    formData.append('summary', data.summary);
+    formData.append('description', data.description);
+
+    if (data.projectKey) {
+      formData.append('project_key', data.projectKey);
+    }
+
+    if (data.issueType) {
+      formData.append('issue_type', data.issueType);
+    }
+
+    // Ajouter les fichiers s'il y en a
+    if (data.attachments && data.attachments.length > 0) {
+      data.attachments.forEach((file) => {
+        formData.append('attachments[]', file);
+      });
+    }
+
+    const response = await apiClient.post<CreateTicketResponse>('/v1/jira/tickets', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 

@@ -2,7 +2,13 @@
 
 namespace App\Service;
 
+use App\Entity\Cross;
+use App\Entity\User;
+use App\Repository\CrossRepository;
+use App\Repository\UserRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -41,8 +47,11 @@ class JiraClient
         string $jiraBaseUrl,
         string $jiraEmail,
         string $jiraApiToken,
+        private CrossRepository $crossRepository,
+        private UserRepository $userRepository,
+        private EntityManagerInterface $entityManager,
+        string $defaultIssueType = 'Task',
         string $defaultProjectKey = 'WEB',
-        string $defaultIssueType = 'Task'
     ) {
         $this->logger = $logger;
         $this->jiraBaseUrl = rtrim($jiraBaseUrl, '/');
@@ -80,6 +89,7 @@ class JiraClient
      * @throws \Exception En cas d'erreur lors de la création
      */
     public function createIssue(
+        UserInterface $user,
         string $summary,
         string $description,
         ?string $projectKey = null,
@@ -141,7 +151,6 @@ class JiraClient
             'summary' => $summary,
             'issueType' => $issueType
         ]);
-//        dd($issueData);
         try {
             $response = $this->httpClient->request('POST', $this->jiraBaseUrl . '/rest/api/3/issue', [
                 'json' => $issueData
@@ -155,7 +164,10 @@ class JiraClient
                     'issueId' => $responseData['id'],
                     'issueKey' => $responseData['key']
                 ]);
-
+                $userEntity = $this->userRepository->find($user->getId());
+                $cross = (new Cross())->setSender($userEntity)->setCode($responseData['key']);
+                $this->entityManager->persist($cross);
+                $this->entityManager->flush();
                 return $responseData;
             } else {
                 throw new \Exception("Erreur lors de la création du ticket: " . $response->getContent(false));
@@ -260,6 +272,7 @@ class JiraClient
      * @throws \Exception En cas d'erreur
      */
     public function createIssueWithAttachment(
+        UserInterface $user,
         string $summary,
         string $description,
         UploadedFile $attachment,
@@ -274,7 +287,7 @@ class JiraClient
 
         try {
             // Étape 1: Créer le ticket
-            $issueData = $this->createIssue($summary, $description, $projectKey, $issueType,null, $additionalFields);
+            $issueData = $this->createIssue( $user,$summary, $description, $projectKey, $issueType,null, $additionalFields);
             $issueKey = $issueData['key'];
 
             // Étape 2: Ajouter la pièce jointe
@@ -405,6 +418,76 @@ class JiraClient
             $this->logger->error('Erreur lors de la récupération des métadonnées de création', [
                 'error' => $e->getMessage(),
                 'projectKey' => $projectKey
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Liste les tickets selon des critères de recherche
+     *
+     * Utilise l'API de recherche Jira avec JQL (Jira Query Language).
+     * Par défaut, liste tous les tickets du projet par défaut.
+     *
+     * @param string|null $projectKey Clé du projet à filtrer (utilise le défaut si null)
+     * @param string|null $jql Requête JQL personnalisée (optionnel, prioritaire sur projectKey)
+     * @param int $maxResults Nombre maximum de résultats (défaut: 50)
+     * @param int $startAt Index de départ pour la pagination (défaut: 0)
+     * @param array $fields Champs à récupérer (défaut: tous les champs navigables)
+     *
+     * @return array Résultats de la recherche avec 'issues', 'total', 'startAt', 'maxResults'
+     * @throws \Exception En cas d'erreur lors de la recherche
+     */
+    public function listIssues(
+        ?string $projectKey = null,
+        ?string $jql = null,
+        int $maxResults = 50,
+        int $startAt = 0,
+        array $fields = ['*navigable']
+    ): array {
+        // Construction de la requête JQL
+        if ($jql === null) {
+            $projectKey = $projectKey ?? $this->defaultProjectKey;
+            $jql = "project = {$projectKey} ORDER BY created DESC";
+        }
+
+        $this->logger->info('Recherche de tickets Jira', [
+            'jql' => $jql,
+            'maxResults' => $maxResults,
+            'startAt' => $startAt
+        ]);
+
+        try {
+            $response = $this->httpClient->request('GET',
+                $this->jiraBaseUrl . '/rest/api/3/search',
+                [
+                    'query' => [
+                        'jql' => $jql,
+                        'maxResults' => $maxResults,
+                        'startAt' => $startAt,
+                        'fields' => implode(',', $fields)
+                    ]
+                ]
+            );
+
+            $statusCode = $response->getStatusCode();
+            $responseData = $response->toArray();
+
+            if ($statusCode === 200) {
+                $this->logger->info('Tickets récupérés avec succès', [
+                    'total' => $responseData['total'],
+                    'returned' => count($responseData['issues'])
+                ]);
+
+                return $responseData;
+            } else {
+                throw new \Exception("Erreur lors de la recherche de tickets: " . $response->getContent(false));
+            }
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la recherche de tickets', [
+                'error' => $e->getMessage(),
+                'jql' => $jql
             ]);
             throw $e;
         }
