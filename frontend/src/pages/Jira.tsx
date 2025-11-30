@@ -335,7 +335,8 @@ export default function Jira() {
                   padding: '10px',
                   backgroundColor: '#e3f2fd',
                   borderRadius: '4px',
-                  border: '1px solid #90caf9'
+                  border: '1px solid #90caf9',
+                  color:"black"
                 }}>
                   <strong>Fichiers sélectionnés ({selectedFiles.length}) :</strong>
                   <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>

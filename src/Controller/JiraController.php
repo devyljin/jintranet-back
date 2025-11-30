@@ -316,6 +316,17 @@ class JiraController extends AbstractController
                 }
             }
 
+            // Récupérer les votes
+            $votesData = ['votes' => 0, 'hasVoted' => false, 'voters' => []];
+            try {
+                $votesData = $this->jiraClient->getVotes($ticketKey);
+            } catch (\Exception $e) {
+                $this->logger->warning('Impossible de récupérer les votes', [
+                    'ticketKey' => $ticketKey,
+                    'error' => $e->getMessage()
+                ]);
+            }
+
             return $this->json([
                 'success' => true,
                 'ticket' => [
@@ -335,6 +346,8 @@ class JiraController extends AbstractController
                     'comments' => $comments,
                     'attachmentsCount' => count($attachments),
                     'commentsCount' => count($comments),
+                    'votes' => $votesData['votes'] ?? 0,
+                    'hasVoted' => $votesData['hasVoted'] ?? false,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -623,6 +636,102 @@ class JiraController extends AbstractController
             return $this->json([
                 'success' => false,
                 'message' => 'Erreur lors de l\'ajout du commentaire: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Ajoute un vote à un ticket Jira
+     */
+    #[Route('/tickets/{ticketKey}/vote', name: 'add_vote', methods: ['POST'])]
+    public function addVote(string $ticketKey): JsonResponse
+    {
+        try {
+            // Vérifier que l'utilisateur est authentifié
+            $user = $this->getUser();
+
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], Response::HTTP_UNAUTHORIZED);
+            }
+
+            $this->logger->info('Ajout d\'un vote au ticket', [
+                'ticketKey' => $ticketKey,
+                'userId' => $user->getId()
+            ]);
+
+            // Ajouter le vote via le service JiraClient
+            $this->jiraClient->addVote($ticketKey);
+
+            // Récupérer les votes mis à jour
+            $votesData = $this->jiraClient->getVotes($ticketKey);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Vote ajouté avec succès',
+                'votes' => $votesData['votes'] ?? 0,
+                'hasVoted' => $votesData['hasVoted'] ?? false
+            ]);
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de l\'ajout du vote', [
+                'ticketKey' => $ticketKey,
+                'error' => $e->getMessage()
+            ]);
+
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'ajout du vote: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Retire un vote d'un ticket Jira
+     */
+    #[Route('/tickets/{ticketKey}/vote', name: 'remove_vote', methods: ['DELETE'])]
+    public function removeVote(string $ticketKey): JsonResponse
+    {
+        try {
+            // Vérifier que l'utilisateur est authentifié
+            $user = $this->getUser();
+
+            if (!$user) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], Response::HTTP_UNAUTHORIZED);
+            }
+
+            $this->logger->info('Retrait d\'un vote du ticket', [
+                'ticketKey' => $ticketKey,
+                'userId' => $user->getId()
+            ]);
+
+            // Retirer le vote via le service JiraClient
+            $this->jiraClient->removeVote($ticketKey);
+
+            // Récupérer les votes mis à jour
+            $votesData = $this->jiraClient->getVotes($ticketKey);
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Vote retiré avec succès',
+                'votes' => $votesData['votes'] ?? 0,
+                'hasVoted' => $votesData['hasVoted'] ?? false
+            ]);
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors du retrait du vote', [
+                'ticketKey' => $ticketKey,
+                'error' => $e->getMessage()
+            ]);
+
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors du retrait du vote: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

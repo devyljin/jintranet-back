@@ -14,6 +14,7 @@ export default function TicketDetail() {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [commentError, setCommentError] = useState('');
   const [commentSuccess, setCommentSuccess] = useState('');
+  const [voting, setVoting] = useState(false);
 
   useEffect(() => {
     if (ticketKey) {
@@ -70,6 +71,33 @@ export default function TicketDetail() {
       );
     } finally {
       setSubmittingComment(false);
+    }
+  };
+
+  const handleVote = async () => {
+    if (!ticketKey || !ticket) return;
+
+    setVoting(true);
+
+    try {
+      let response;
+      if (ticket.hasVoted) {
+        response = await jiraApi.removeVote(ticketKey);
+      } else {
+        response = await jiraApi.addVote(ticketKey);
+      }
+
+      // Mettre à jour les votes localement
+      setTicket({
+        ...ticket,
+        votes: response.votes,
+        hasVoted: response.hasVoted
+      });
+    } catch (err: any) {
+      console.error('Erreur lors du vote:', err);
+      // On pourrait afficher une notification d'erreur ici
+    } finally {
+      setVoting(false);
     }
   };
 
@@ -138,14 +166,38 @@ export default function TicketDetail() {
             {ticket.status}
           </span>
         </div>
-        <a
-          href={ticket.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-primary"
-        >
-          Voir dans Jira →
-        </a>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            onClick={handleVote}
+            disabled={voting}
+            className={ticket.hasVoted ? 'btn-vote voted' : 'btn-vote'}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '4px',
+              border: '1px solid #ddd',
+              background: ticket.hasVoted ? '#2196f3' : 'white',
+              color: ticket.hasVoted ? 'white' : '#333',
+              cursor: voting ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <span style={{ fontSize: '18px' }}>👍</span>
+            <span>{ticket.votes || 0}</span>
+          </button>
+          <a
+            href={ticket.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary"
+          >
+            Voir dans Jira →
+          </a>
+        </div>
       </header>
 
       {/* Contenu principal */}

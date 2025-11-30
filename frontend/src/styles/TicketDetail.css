@@ -23,13 +23,14 @@
 }
 
 .btn-back {
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+    color: black;
 }
 
 .btn-back:hover {
@@ -101,6 +102,7 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
+    color:black;
 }
 
 .metadata-item .label {

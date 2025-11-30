@@ -37,6 +37,8 @@ export interface JiraTicket {
   comments?: JiraComment[];
   attachmentsCount?: number;
   commentsCount?: number;
+  votes?: number;
+  hasVoted?: boolean;
 }
 
 export interface CreateTicketData {
@@ -129,6 +131,16 @@ export const jiraApi = {
     const response = await apiClient.post(`/v1/jira/tickets/${ticketKey}/comment`, {
       comment
     });
+    return response.data;
+  },
+
+  addVote: async (ticketKey: string): Promise<{ success: boolean; votes: number; hasVoted: boolean; message: string }> => {
+    const response = await apiClient.post(`/v1/jira/tickets/${ticketKey}/vote`);
+    return response.data;
+  },
+
+  removeVote: async (ticketKey: string): Promise<{ success: boolean; votes: number; hasVoted: boolean; message: string }> => {
+    const response = await apiClient.delete(`/v1/jira/tickets/${ticketKey}/vote`);
     return response.data;
   },
 };

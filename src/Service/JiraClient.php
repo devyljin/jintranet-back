@@ -494,6 +494,131 @@ class JiraClient
     }
 
     /**
+     * Récupère les votes d'un ticket Jira
+     *
+     * @param string $issueKey Clé du ticket (ex: "WEB-123")
+     *
+     * @return array Données des votes (votes: int, hasVoted: bool, voters: array)
+     * @throws \Exception En cas d'erreur lors de la récupération des votes
+     */
+    public function getVotes(string $issueKey): array
+    {
+        $this->logger->info('Récupération des votes du ticket Jira', [
+            'issueKey' => $issueKey
+        ]);
+
+        try {
+            $response = $this->httpClient->request(
+                'GET',
+                $this->jiraBaseUrl . '/rest/api/3/issue/' . $issueKey . '/votes'
+            );
+
+            $statusCode = $response->getStatusCode();
+            $responseData = $response->toArray();
+
+            if ($statusCode === 200) {
+                $this->logger->info('Votes récupérés avec succès', [
+                    'issueKey' => $issueKey,
+                    'votes' => $responseData['votes']
+                ]);
+
+                return $responseData;
+            } else {
+                throw new \Exception("Erreur lors de la récupération des votes: " . $response->getContent(false));
+            }
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de la récupération des votes', [
+                'error' => $e->getMessage(),
+                'issueKey' => $issueKey
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Ajoute un vote à un ticket Jira
+     *
+     * @param string $issueKey Clé du ticket (ex: "WEB-123")
+     *
+     * @return bool Succès de l'opération
+     * @throws \Exception En cas d'erreur lors de l'ajout du vote
+     */
+    public function addVote(string $issueKey): bool
+    {
+        $this->logger->info('Ajout d\'un vote au ticket Jira', [
+            'issueKey' => $issueKey
+        ]);
+
+        try {
+            $response = $this->httpClient->request(
+                'POST',
+                $this->jiraBaseUrl . '/rest/api/3/issue/' . $issueKey . '/votes'
+            );
+
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode === 204) {
+                $this->logger->info('Vote ajouté avec succès', [
+                    'issueKey' => $issueKey
+                ]);
+
+                return true;
+            } else {
+                throw new \Exception("Erreur lors de l'ajout du vote: " . $response->getContent(false));
+            }
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors de l\'ajout du vote', [
+                'error' => $e->getMessage(),
+                'issueKey' => $issueKey
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Retire un vote d'un ticket Jira
+     *
+     * @param string $issueKey Clé du ticket (ex: "WEB-123")
+     *
+     * @return bool Succès de l'opération
+     * @throws \Exception En cas d'erreur lors du retrait du vote
+     */
+    public function removeVote(string $issueKey): bool
+    {
+        $this->logger->info('Retrait d\'un vote du ticket Jira', [
+            'issueKey' => $issueKey
+        ]);
+
+        try {
+            $response = $this->httpClient->request(
+                'DELETE',
+                $this->jiraBaseUrl . '/rest/api/3/issue/' . $issueKey . '/votes'
+            );
+
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode === 204) {
+                $this->logger->info('Vote retiré avec succès', [
+                    'issueKey' => $issueKey
+                ]);
+
+                return true;
+            } else {
+                throw new \Exception("Erreur lors du retrait du vote: " . $response->getContent(false));
+            }
+
+        } catch (\Exception $e) {
+            $this->logger->error('Erreur lors du retrait du vote', [
+                'error' => $e->getMessage(),
+                'issueKey' => $issueKey
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Ajoute un commentaire à un ticket Jira
      *
      * @param string $issueKey Clé du ticket (ex: "WEB-123")
