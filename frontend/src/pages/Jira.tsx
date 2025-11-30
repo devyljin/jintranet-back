@@ -170,7 +170,7 @@ export default function Jira() {
   };
 
   const renderTicketCard = (ticket: JiraTicket) => (
-    <div className="ticket-card">
+    <div className="ticket-card" onClick={() => navigate(`/ticket/${ticket.key}`)} style={{ cursor: 'pointer' }}>
       <div className="ticket-header">
         <h3>{ticket.key}</h3>
         <span className={`ticket-status status-${ticket.status.toLowerCase()}`}>
@@ -195,15 +195,39 @@ export default function Jira() {
         <div className="ticket-meta-item">
           <strong>Créé le:</strong> {new Date(ticket.created).toLocaleDateString('fr-FR')}
         </div>
+        {ticket.attachmentsCount && ticket.attachmentsCount > 0 && (
+          <div className="ticket-meta-item">
+            <strong>📎 Pièces jointes:</strong> {ticket.attachmentsCount}
+          </div>
+        )}
+        {ticket.commentsCount && ticket.commentsCount > 0 && (
+          <div className="ticket-meta-item">
+            <strong>💬 Commentaires:</strong> {ticket.commentsCount}
+          </div>
+        )}
       </div>
-      <a
-        href={`https://agrume.atlassian.net/browse/${ticket.key}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="ticket-link"
-      >
-        Voir dans Jira →
-      </a>
+      <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/ticket/${ticket.key}`);
+          }}
+          className="btn-primary"
+          style={{ flex: 1 }}
+        >
+          Voir les détails
+        </button>
+        <a
+          href={ticket.url || `https://agrume.atlassian.net/browse/${ticket.key}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ticket-link"
+          onClick={(e) => e.stopPropagation()}
+          style={{ flex: 1, textAlign: 'center', textDecoration: 'none' }}
+        >
+          Voir dans Jira →
+        </a>
+      </div>
     </div>
   );
 

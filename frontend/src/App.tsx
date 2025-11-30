@@ -6,6 +6,7 @@ import Chat from './pages/Chat';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Jira from './pages/Jira';
+import TicketDetail from './pages/TicketDetail';
 import Loading from './components/Loading';
 
 const queryClient = new QueryClient({
@@ -66,6 +67,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Jira />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ticket/:ticketKey"
+        element={
+          <ProtectedRoute>
+            <TicketDetail />
           </ProtectedRoute>
         }
       />

@@ -1,5 +1,25 @@
 import { apiClient } from './client';
 
+export interface JiraAttachment {
+  id: string;
+  filename: string;
+  size: number;
+  mimeType: string;
+  created: string;
+  author: string;
+  content: string; // URL de téléchargement
+  thumbnail?: string; // URL de la miniature
+}
+
+export interface JiraComment {
+  id: string;
+  author: string;
+  authorEmail?: string;
+  body: string;
+  created: string;
+  updated: string;
+}
+
 export interface JiraTicket {
   key: string;
   id: string;
@@ -12,6 +32,11 @@ export interface JiraTicket {
   reporter: string;
   created: string;
   updated: string;
+  url?: string;
+  attachments?: JiraAttachment[];
+  comments?: JiraComment[];
+  attachmentsCount?: number;
+  commentsCount?: number;
 }
 
 export interface CreateTicketData {

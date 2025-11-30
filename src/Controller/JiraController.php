@@ -275,13 +275,46 @@ class JiraController extends AbstractController
         }
     }
     /**
-     * Récupérer un ticket par sa clé
+     * Récupérer un ticket par sa clé avec tous les détails
+     * (incluant attachments et commentaires)
      */
     #[Route('/tickets/{ticketKey}', name: 'get_ticket', methods: ['GET'])]
     public function getTicket(string $ticketKey): JsonResponse
     {
         try {
             $ticket = $this->jiraClient->getIssue($ticketKey);
+
+            // Extraire les pièces jointes
+            $attachments = [];
+            if (isset($ticket['fields']['attachment']) && is_array($ticket['fields']['attachment'])) {
+                foreach ($ticket['fields']['attachment'] as $attachment) {
+                    $attachments[] = [
+                        'id' => $attachment['id'],
+                        'filename' => $attachment['filename'],
+                        'size' => $attachment['size'],
+                        'mimeType' => $attachment['mimeType'] ?? 'unknown',
+                        'created' => $attachment['created'] ?? null,
+                        'author' => $attachment['author']['displayName'] ?? 'Unknown',
+                        'content' => $attachment['content'] ?? null, // URL de téléchargement
+                        'thumbnail' => $attachment['thumbnail'] ?? null, // URL de la miniature
+                    ];
+                }
+            }
+
+            // Extraire les commentaires
+            $comments = [];
+            if (isset($ticket['fields']['comment']['comments']) && is_array($ticket['fields']['comment']['comments'])) {
+                foreach ($ticket['fields']['comment']['comments'] as $comment) {
+                    $comments[] = [
+                        'id' => $comment['id'],
+                        'author' => $comment['author']['displayName'] ?? 'Unknown',
+                        'authorEmail' => $comment['author']['emailAddress'] ?? null,
+                        'body' => $this->extractDescriptionText($comment['body'] ?? null),
+                        'created' => $comment['created'] ?? null,
+                        'updated' => $comment['updated'] ?? null,
+                    ];
+                }
+            }
 
             return $this->json([
                 'success' => true,
@@ -297,6 +330,11 @@ class JiraController extends AbstractController
                     'reporter' => $ticket['fields']['reporter']['displayName'] ?? 'Unknown',
                     'created' => $ticket['fields']['created'] ?? null,
                     'updated' => $ticket['fields']['updated'] ?? null,
+                    'url' => $this->generateJiraUrl($ticket['key']),
+                    'attachments' => $attachments,
+                    'comments' => $comments,
+                    'attachmentsCount' => count($attachments),
+                    'commentsCount' => count($comments),
                 ],
             ]);
         } catch (\Exception $e) {
