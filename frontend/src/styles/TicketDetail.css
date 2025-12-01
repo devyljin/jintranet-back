@@ -1,5 +1,5 @@
 .ticket-detail-container {
-  max-width: 1200px;
+    width: 96vw;
   margin: 0 auto;
   padding: 20px;
 }
@@ -14,6 +14,7 @@
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
+width: 95vw;
 }
 
 .ticket-detail-header > div {
@@ -21,7 +22,18 @@
   align-items: center;
   gap: 15px;
 }
+.ticket-detail-right, .ticket-detail-left{
+    width:48vw;
+    align-content: center;
+}
+.ticket-detail-left {
+    display: flex;
+    flex-direction: column;
+    gap:1vh;
+}
+.ticket-detail-right {
 
+}
 .btn-back {
     background: #f5f5f5;
     border: 1px solid #ddd;
@@ -73,8 +85,8 @@
 /* Contenu principal */
 .ticket-detail-content {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  /*flex-direction: column;*/
+gap:1vw;
 }
 
 /* Section d'information */

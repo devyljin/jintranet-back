@@ -12,7 +12,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' , width:"95vw"}}>
         <h1>Intragrume Dashboard</h1>
         <div>
           <span>Bienvenue, {user?.username}</span>
@@ -33,12 +33,6 @@ export default function Dashboard() {
           <h2>Jira</h2>
           <p>Gérez vos tickets Jira</p>
           <a href="/jira">Ouvrir Jira →</a>
-        </div>
-
-        <div style={{ border: '1px solid #ccc', padding: '1rem', borderRadius: '8px' }}>
-          <h2>Cross</h2>
-          <p>Fonctionnalités croisées</p>
-          <a href="/cross">Ouvrir Cross →</a>
         </div>
       </div>
     </div>

@@ -203,6 +203,7 @@ export default function TicketDetail() {
       {/* Contenu principal */}
       <div className="ticket-detail-content">
         {/* Informations principales */}
+        <section className="ticket-detail-left">
         <section className="ticket-info-section">
           <h2>{ticket.summary}</h2>
 
@@ -297,7 +298,13 @@ export default function TicketDetail() {
             </div>
           </section>
         )}
-
+          {(!ticket.attachments || ticket.attachments.length === 0) && (
+            <section className="empty-section">
+              <p>📎 Aucune pièce jointe</p>
+            </section>
+          )}
+        </section>
+        <section className="ticket-detail-right">
         {/* Commentaires */}
         <section className="comments-section">
           <h3>💬 Commentaires ({ticket.commentsCount || 0})</h3>
@@ -384,13 +391,8 @@ export default function TicketDetail() {
             </div>
           )}
         </section>
+        </section>
 
-        {/* Sections vides */}
-        {(!ticket.attachments || ticket.attachments.length === 0) && (
-          <section className="empty-section">
-            <p>📎 Aucune pièce jointe</p>
-          </section>
-        )}
       </div>
     </div>
   );
